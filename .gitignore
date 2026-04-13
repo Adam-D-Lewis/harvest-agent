@@ -1,0 +1,6 @@
+__pycache__/
+node_modules/
+.obsidian
+.pixi/
+.pytest_cache/
+.env

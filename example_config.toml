@@ -1,0 +1,56 @@
+# Harvest Agent — example configuration
+# Copy this to ~/.config/harvest-agent/config.toml and edit.
+
+[user]
+name = "Jane Smith"
+
+[[shortcut]]
+name = "acme"
+project = "Web Redesign"
+task = "Programming"
+notes = "Default Acme Corp work"
+
+[[shortcut]]
+name = "acme meeting"
+project = "Web Redesign"
+task = "Meetings / Standups"
+notes = "Tuesdays and Thursdays, ~1h each"
+
+[[shortcut]]
+name = "mobile"
+project = "Mobile App v2"
+task = "Backend API"
+notes = "Backend API development work"
+
+[[shortcut]]
+name = "pto"
+project = "PTO (PTO, Sick Leave, Parental Leave)"
+task = "PTO"
+
+[[recurring_meeting]]
+day = "tuesday"
+project = "Web Redesign"
+task = "Meetings / Standups"
+hours = 1.0
+
+[[recurring_meeting]]
+day = "wednesday"
+project = "Mobile App v2"
+task = "Meetings / Standups"
+hours = 1.0
+
+[[recurring_meeting]]
+day = "thursday"
+project = "Web Redesign"
+task = "Meetings / Standups"
+hours = 1.0
+
+[behavior]
+flag_weekends = true
+auto_split_meetings = true
+notes = """
+Round hours to the nearest 0.25.
+I don't typically work weekends — flag any Sat/Sun entries as unusual.
+When logging a day, split recurring meetings into separate entries
+rather than putting everything under one task.
+"""

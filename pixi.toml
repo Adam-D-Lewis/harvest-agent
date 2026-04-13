@@ -1,0 +1,33 @@
+[workspace]
+name = "harvest-agent"
+version = "0.1.0"
+description = "PydanticAI agent that wraps the harvest CLI with safety rails"
+channels = ["conda-forge"]
+platforms = ["linux-64", "osx-arm64", "osx-64"]
+
+[dependencies]
+python = ">=3.11"
+
+[pypi-dependencies]
+pydantic-ai = "*"
+pydantic = ">=2.0"
+pytest = "*"
+harvest-agent = { path = ".", editable = true }
+
+[tasks]
+test = "pytest -q"
+
+[tasks.evals]
+cmd = "python -m evals.run_evals"
+env = { HARVEST_AGENT_BASE_URL = "http://localhost:8080/v1", HARVEST_AGENT_MODEL = "gemma-4-26b" }
+
+# `agent` and `show-config` share the same env defaults so `show-config`
+# accurately reflects what `agent` will see at runtime. Override either by
+# exporting different values in your shell before running pixi.
+[tasks.agent]
+cmd = "python -m harvest_agent"
+env = { HARVEST_AGENT_BASE_URL = "http://localhost:8080/v1", HARVEST_AGENT_MODEL = "gemma-4-26b", HARVEST_AGENT_DEBUG = "true" }
+
+[tasks.show-config]
+cmd = "python -m harvest_agent.show_config"
+env = { HARVEST_AGENT_BASE_URL = "http://localhost:8080/v1", HARVEST_AGENT_MODEL = "gemma-4-26b", HARVEST_AGENT_DEBUG = "true" }
