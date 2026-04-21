@@ -1,14 +1,16 @@
 """Build the agent's system prompt from a Config."""
 
 from datetime import date, timedelta
+from pathlib import Path
 
 from harvest_agent.config import Config
 from harvest_agent.project_index import ProjectIndex
 
 _BASE_INSTRUCTIONS = """\
 You are a Harvest time-tracking assistant. Your only capability is calling the
-harvest tools provided. You cannot run shell commands, read arbitrary files, or
-access the network directly.
+harvest tools provided. You cannot run shell commands or access the network
+directly. You know where your preferences file lives (see "Your preferences
+file" below, when present) but cannot edit it — the user edits it manually.
 
 The tools do several things automatically so you don't have to:
 
@@ -96,6 +98,54 @@ def _format_behavior(cfg: Config) -> str:
     return "\n".join(parts)
 
 
+def _format_preferences_file(config_path: Path | None) -> str:
+    """Render a section telling the model where config.toml lives and how to
+    suggest edits. Returns '' if no path was supplied so the section is
+    simply absent for callers that don't care (tests, evals).
+
+    The agent has no file-editing tool — this section exists so the model
+    can answer 'where are my preferences?' with the real path plus a
+    ready-to-paste TOML snippet, and explicitly tell the user that changes
+    take effect only on the next agent restart.
+    """
+    if config_path is None:
+        return ""
+    return f"""## Your preferences file
+
+Your shortcuts, recurring meetings, and behavior notes above are loaded from:
+  {config_path}
+
+You cannot edit this file yourself. When the user asks where preferences
+live, says "remember this", asks to add a shortcut, or otherwise wants to
+change their preferences, respond with:
+
+1. The file path above.
+2. A ready-to-paste TOML snippet in a fenced code block.
+3. A one-line note that changes take effect on the next agent restart.
+
+Snippet schemas (copy the shape, fill in values):
+
+[[shortcut]]
+name = "<short name user will type>"
+project = "<exact project name from Projects and tasks>"
+task = "<exact task name>"
+notes = "<optional default notes>"
+
+[[recurring_meeting]]
+day = "monday"   # monday..sunday
+project = "<project>"
+task = "<task>"
+hours = 1.0
+
+# For free-form guidance, append a line inside the existing behavior.notes block:
+[behavior]
+notes = \"\"\"
+...existing lines...
+<your new line>
+\"\"\"
+"""
+
+
 def _format_three_weeks(today: date) -> str:
     """Render last week, this week, and next week (Mon-Sun each) as a
     weekday→date table.
@@ -120,6 +170,7 @@ def build_system_prompt(
     cfg: Config,
     today: date,
     project_index: ProjectIndex | None = None,
+    config_path: Path | None = None,
 ) -> str:
     """Build the full system prompt for the agent."""
     # Spell the date out two ways for the model: weekday-named today, then
@@ -148,5 +199,9 @@ def build_system_prompt(
         block = builder(cfg)
         if block:
             sections.append("\n" + block)
+
+    prefs_block = _format_preferences_file(config_path)
+    if prefs_block:
+        sections.append("\n" + prefs_block)
 
     return "\n".join(sections)

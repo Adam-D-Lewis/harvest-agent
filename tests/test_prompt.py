@@ -168,3 +168,33 @@ def test_prompt_omits_projects_section_when_index_not_passed():
     cfg = Config.model_validate(_config_dict())
     prompt = build_system_prompt(cfg, today=date(2026, 4, 7))
     assert "## Projects and tasks" not in prompt
+
+
+from pathlib import Path
+
+
+def test_prompt_includes_config_path_when_given():
+    cfg = Config.model_validate(_config_dict())
+    fake_path = Path("/tmp/fake-harvest-agent/config.toml")
+    prompt = build_system_prompt(cfg, today=date(2026, 4, 7), config_path=fake_path)
+    assert str(fake_path) in prompt
+    assert "## Your preferences file" in prompt
+
+
+def test_prompt_includes_schema_examples_when_config_path_given():
+    cfg = Config.model_validate(_config_dict())
+    prompt = build_system_prompt(
+        cfg, today=date(2026, 4, 7), config_path=Path("/tmp/cfg.toml")
+    )
+    # The three schema shapes the agent should paste back to the user.
+    assert "[[shortcut]]" in prompt
+    assert "[[recurring_meeting]]" in prompt
+    assert "behavior.notes" in prompt or "[behavior]" in prompt
+
+
+def test_prompt_omits_preferences_file_section_when_config_path_none():
+    """Default behaviour: callers that don't pass a config_path get no new
+    section. Keeps existing tests and eval fixtures unaffected."""
+    cfg = Config.model_validate(_config_dict())
+    prompt = build_system_prompt(cfg, today=date(2026, 4, 7))
+    assert "## Your preferences file" not in prompt
