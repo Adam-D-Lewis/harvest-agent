@@ -3,6 +3,7 @@
 import os
 import sys
 from datetime import date
+from pathlib import Path
 
 from pydantic_ai import Agent
 
@@ -99,7 +100,12 @@ def _format_debug_messages(messages) -> str:
     return "\n".join(lines)
 
 
-def _build_agent(cfg: Config, model=None, today: date | None = None) -> Agent:
+def _build_agent(
+    cfg: Config,
+    model=None,
+    today: date | None = None,
+    config_path: Path | None = None,
+) -> Agent:
     if model is None:
         model = _resolve_model()
     if today is None:
@@ -114,7 +120,12 @@ def _build_agent(cfg: Config, model=None, today: date | None = None) -> Agent:
     tools.configure(shortcuts=cfg.shortcut, today=today, project_index=project_index)
     agent = Agent(
         model=model,
-        system_prompt=build_system_prompt(cfg, today=today, project_index=project_index),
+        system_prompt=build_system_prompt(
+            cfg,
+            today=today,
+            project_index=project_index,
+            config_path=config_path,
+        ),
     )
 
     # Read-only
@@ -165,7 +176,7 @@ def run_repl() -> int:
         print(f"Could not load config: {e}", file=sys.stderr)
         return 2
 
-    agent = _build_agent(cfg)
+    agent = _build_agent(cfg, config_path=config_path)
     debug = bool(os.environ.get("HARVEST_AGENT_DEBUG"))
     print(f"Harvest Agent ready (model={_describe_model(agent.model)}, config={config_path})")
     if debug:

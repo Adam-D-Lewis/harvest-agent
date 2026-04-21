@@ -4,6 +4,7 @@ Uses PydanticAI's TestModel to avoid hitting a real LLM provider.
 """
 
 from datetime import date
+from pathlib import Path
 from unittest.mock import patch
 
 from pydantic_ai.models.test import TestModel
@@ -84,3 +85,22 @@ def test_agent_build_handles_failed_project_index_fetch():
     assert agent is not None
     assert tools._context.project_index == {}
     tools.configure()
+
+
+def test_agent_build_threads_config_path_into_system_prompt():
+    """_build_agent should pass config_path through to build_system_prompt
+    so the rendered system prompt contains the preferences-file section."""
+    fake_path = Path("/tmp/fake-harvest-agent/config.toml")
+    with patch("harvest_agent.agent.build_project_index", return_value={}):
+        agent = _build_agent(
+            Config(),
+            model=TestModel(call_tools=[]),
+            today=date(2026, 4, 8),
+            config_path=fake_path,
+        )
+    # PydanticAI Agent exposes its system prompt(s) via ._system_prompts.
+    # The path string should appear in the rendered prompt.
+    rendered = "\n".join(agent._system_prompts)
+    assert str(fake_path) in rendered
+    assert "## Your preferences file" in rendered
+    tools.configure()  # reset
