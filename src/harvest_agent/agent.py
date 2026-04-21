@@ -9,7 +9,7 @@ from pydantic_ai import Agent
 
 from harvest_agent import tools
 from harvest_agent.config import Config, ConfigError, default_config_path, load_config
-from harvest_agent.day_diff import fetch_today_entries, format_changes
+from harvest_agent.day_diff import fetch_recent_entries, format_changes
 from harvest_agent.project_index import build_project_index
 from harvest_agent.prompt import build_system_prompt
 from harvest_agent.recent_usage import build_recent_pairs
@@ -207,10 +207,13 @@ def run_repl() -> int:
             print("Bye!")
             return 0
 
-        # Snapshot today's entries so we can show a deterministic before/after
-        # summary after the agent's turn. Lives in the REPL layer (not prompt-
-        # driven) so even weak models can't bypass it.
-        before_today = fetch_today_entries()
+        # Snapshot entries in a window around today so we can show a
+        # deterministic before/after summary — covers past edits (e.g.
+        # cleaning up last week) and future edits (e.g. logging planned PTO),
+        # not just today. Lives in the REPL layer (not prompt-driven) so even
+        # weak models can't bypass it.
+        snapshot_today = date.today()
+        before_entries = fetch_recent_entries(snapshot_today)
         result = agent.run_sync(user_input, message_history=message_history)
         if debug:
             debug_lines = _format_debug_messages(result.new_messages())
@@ -218,8 +221,8 @@ def run_repl() -> int:
                 print("\n[debug]")
                 print(debug_lines)
         message_history = result.all_messages()
-        after_today = fetch_today_entries()
-        changes = format_changes(before_today, after_today)
+        after_entries = fetch_recent_entries(snapshot_today)
+        changes = format_changes(before_entries, after_entries)
         if changes:
             print(f"\n{changes}")
         print(f"\nAgent> {result.output}\n")
