@@ -41,6 +41,16 @@ def test_config_empty_is_valid():
     assert cfg.user.name is None
 
 
+def test_behavior_unusual_project_window_days_default():
+    cfg = Config.model_validate({})
+    assert cfg.behavior.unusual_project_window_days == 30
+
+
+def test_behavior_unusual_project_window_days_custom():
+    cfg = Config.model_validate({"behavior": {"unusual_project_window_days": 60}})
+    assert cfg.behavior.unusual_project_window_days == 60
+
+
 from pathlib import Path
 from harvest_agent.config import load_config, ConfigError, default_config_path
 

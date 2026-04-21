@@ -11,6 +11,7 @@ from harvest_agent import tools
 from harvest_agent.config import Config, ConfigError, default_config_path, load_config
 from harvest_agent.project_index import build_project_index
 from harvest_agent.prompt import build_system_prompt
+from harvest_agent.recent_usage import build_recent_pairs
 
 DEFAULT_MODEL = "anthropic:claude-sonnet-4-6"
 
@@ -114,10 +115,21 @@ def _build_agent(
     # failure (auth error, CLI missing) the builder returns {} and prints a
     # warning; we still construct the agent so view tools keep working.
     project_index = build_project_index()
+    # Fetch recent (project, task) pairs so log_time can warn when the user
+    # logs to a pair they haven't used in the configured window. Empty set on
+    # fetch failure disables the warning (same "fail open" pattern as the
+    # project index).
+    recent_pairs = build_recent_pairs(cfg.behavior.unusual_project_window_days, today)
     # Install config-derived state into the tools module so individual tool
     # functions can resolve shortcuts, parse relative dates, and validate
     # project/task names against the same data the system prompt saw.
-    tools.configure(shortcuts=cfg.shortcut, today=today, project_index=project_index)
+    tools.configure(
+        shortcuts=cfg.shortcut,
+        today=today,
+        project_index=project_index,
+        recent_pairs=recent_pairs,
+        recent_window_days=cfg.behavior.unusual_project_window_days,
+    )
     agent = Agent(
         model=model,
         system_prompt=build_system_prompt(

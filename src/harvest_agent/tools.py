@@ -26,6 +26,8 @@ class _ToolContext:
     shortcuts: dict[str, Shortcut] = field(default_factory=dict)
     today_override: date | None = None
     project_index: ProjectIndex = field(default_factory=dict)
+    recent_pairs: set[tuple[str, str]] = field(default_factory=set)
+    recent_window_days: int = 30
 
 
 _context = _ToolContext()
@@ -35,18 +37,24 @@ def configure(
     shortcuts: list[Shortcut] | None = None,
     today: date | None = None,
     project_index: ProjectIndex | None = None,
+    recent_pairs: set[tuple[str, str]] | None = None,
+    recent_window_days: int = 30,
 ) -> None:
-    """Install the user's shortcut table, fake 'today', and project index.
+    """Install the user's shortcut table, fake 'today', project index, and
+    recent-usage data.
 
     Called once by `agent._build_agent`. Tests and evals may call it directly
     to control state. Safe to call repeatedly — each call replaces prior state.
     An empty (or omitted) `project_index` disables project/task validation.
+    An empty (or omitted) `recent_pairs` disables the unusual-project warning.
     """
     global _context
     _context = _ToolContext(
         shortcuts={s.name: s for s in (shortcuts or [])},
         today_override=today,
         project_index=project_index or {},
+        recent_pairs=recent_pairs or set(),
+        recent_window_days=recent_window_days,
     )
 
 
@@ -240,6 +248,13 @@ def log_time(project: str, task: str, hours: float, notes: str, date: str) -> di
         )
     if parsed_date != date and not _looks_like_iso_date(date):
         notes_added.append(f"Date '{date}' parsed to {parsed_date}")
+    # Unusual-project warning: fires only when we have a populated recent_pairs
+    # set (empty = fetch failed or window produced no entries → disabled).
+    if _context.recent_pairs and (project.lower(), task.lower()) not in _context.recent_pairs:
+        notes_added.append(
+            f"You haven't logged to '{project} / {task}' in the last "
+            f"{_context.recent_window_days} days — confirm this is intentional."
+        )
     if notes_added:
         result["tool_notes"] = notes_added
     return result

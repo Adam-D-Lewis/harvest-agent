@@ -31,7 +31,8 @@ EXPECTED_TOOLS = {
 
 
 def test_agent_constructs_with_empty_config():
-    with patch("harvest_agent.agent.build_project_index", return_value={}):
+    with patch("harvest_agent.agent.build_project_index", return_value={}), \
+         patch("harvest_agent.agent.build_recent_pairs", return_value=set()):
         agent = _build_agent(Config(), model=TestModel(call_tools=[]))
     assert agent is not None
 
@@ -40,7 +41,8 @@ def test_agent_registers_all_expected_tools():
     # call_tools=[] sends schemas to the model but skips tool execution,
     # which avoids TTY prompts from confirm_action during tests.
     test_model = TestModel(call_tools=[])
-    with patch("harvest_agent.agent.build_project_index", return_value={}):
+    with patch("harvest_agent.agent.build_project_index", return_value={}), \
+         patch("harvest_agent.agent.build_recent_pairs", return_value=set()):
         agent = _build_agent(Config(), model=test_model)
     with agent.override(model=test_model):
         # A trivial run forces tool schemas to be sent to the model.
@@ -53,7 +55,8 @@ def test_agent_registers_all_expected_tools():
 
 
 def test_agent_run_completes_without_real_provider():
-    with patch("harvest_agent.agent.build_project_index", return_value={}):
+    with patch("harvest_agent.agent.build_project_index", return_value={}), \
+         patch("harvest_agent.agent.build_recent_pairs", return_value=set()):
         agent = _build_agent(Config(), model=TestModel(call_tools=[]))
     with agent.override(model=TestModel(call_tools=[])):
         result = agent.run_sync("hello")
@@ -66,7 +69,8 @@ def test_agent_build_passes_project_index_to_tools_and_prompt():
     fake_index = {
         "web redesign": ProjectInfo(canonical_name="Web Redesign", tasks={"programming": "Programming"}),
     }
-    with patch("harvest_agent.agent.build_project_index", return_value=fake_index):
+    with patch("harvest_agent.agent.build_project_index", return_value=fake_index), \
+         patch("harvest_agent.agent.build_recent_pairs", return_value=set()):
         agent = _build_agent(
             Config(),
             model=TestModel(call_tools=[]),
@@ -80,7 +84,8 @@ def test_agent_build_passes_project_index_to_tools_and_prompt():
 
 def test_agent_build_handles_failed_project_index_fetch():
     """When the index builder returns {}, the agent still constructs."""
-    with patch("harvest_agent.agent.build_project_index", return_value={}):
+    with patch("harvest_agent.agent.build_project_index", return_value={}), \
+         patch("harvest_agent.agent.build_recent_pairs", return_value=set()):
         agent = _build_agent(Config(), model=TestModel(call_tools=[]), today=date(2026, 4, 8))
     assert agent is not None
     assert tools._context.project_index == {}
@@ -91,7 +96,8 @@ def test_agent_build_threads_config_path_into_system_prompt():
     """_build_agent should pass config_path through to build_system_prompt
     so the rendered system prompt contains the preferences-file section."""
     fake_path = Path("/tmp/fake-harvest-agent/config.toml")
-    with patch("harvest_agent.agent.build_project_index", return_value={}):
+    with patch("harvest_agent.agent.build_project_index", return_value={}), \
+         patch("harvest_agent.agent.build_recent_pairs", return_value=set()):
         agent = _build_agent(
             Config(),
             model=TestModel(call_tools=[]),

@@ -32,6 +32,7 @@ class Behavior(BaseModel):
     flag_weekends: bool = False
     auto_split_meetings: bool = False
     notes: str | None = None
+    unusual_project_window_days: int = 30
 
 
 class Config(BaseModel):

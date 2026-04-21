@@ -813,3 +813,87 @@ def test_edit_entry_validation_runs_after_shortcut(configured_project_index):
         assert edit_calls == []
     finally:
         tools.configure()
+
+
+# ---------- Unusual-project warning (log_time) ----------
+
+
+def test_log_time_warns_when_pair_not_in_recent_usage():
+    tools.configure(
+        recent_pairs={("deep learning", "programming")},
+        recent_window_days=30,
+    )
+    try:
+        with patch("harvest_agent.tools.harvest_cli.run", return_value=_ok()):
+            result = tools.log_time(
+                project="Admin", task="Recruiting", hours=1.0, notes="", date="2026-04-08"
+            )
+        assert "tool_notes" in result
+        warning = next((n for n in result["tool_notes"] if "haven't logged" in n), None)
+        assert warning is not None, result["tool_notes"]
+        assert "Admin / Recruiting" in warning
+        assert "30 days" in warning
+    finally:
+        tools.configure()
+
+
+def test_log_time_does_not_warn_when_pair_is_in_recent_usage():
+    tools.configure(
+        recent_pairs={("admin", "recruiting")},
+        recent_window_days=30,
+    )
+    try:
+        with patch("harvest_agent.tools.harvest_cli.run", return_value=_ok()):
+            result = tools.log_time(
+                project="Admin", task="Recruiting", hours=1.0, notes="", date="2026-04-08"
+            )
+        assert "tool_notes" not in result
+    finally:
+        tools.configure()
+
+
+def test_log_time_does_not_warn_when_recent_pairs_empty():
+    """Empty recent_pairs means fetch failed or disabled — don't warn on everything."""
+    tools.configure(recent_pairs=set(), recent_window_days=30)
+    try:
+        with patch("harvest_agent.tools.harvest_cli.run", return_value=_ok()):
+            result = tools.log_time(
+                project="Admin", task="Recruiting", hours=1.0, notes="", date="2026-04-08"
+            )
+        assert "tool_notes" not in result
+    finally:
+        tools.configure()
+
+
+def test_log_time_warning_uses_configured_window_days():
+    tools.configure(
+        recent_pairs={("deep learning", "programming")},
+        recent_window_days=90,
+    )
+    try:
+        with patch("harvest_agent.tools.harvest_cli.run", return_value=_ok()):
+            result = tools.log_time(
+                project="Admin", task="Recruiting", hours=1.0, notes="", date="2026-04-08"
+            )
+        warning = next(n for n in result["tool_notes"] if "haven't logged" in n)
+        assert "90 days" in warning
+    finally:
+        tools.configure()
+
+
+def test_log_time_warning_compares_case_insensitively():
+    """Stored pairs are lowercased; incoming project/task may be any case after canonicalization."""
+    tools.configure(
+        recent_pairs={("admin", "recruiting")},
+        recent_window_days=30,
+    )
+    try:
+        with patch("harvest_agent.tools.harvest_cli.run", return_value=_ok()):
+            # Canonicalized output from validation would preserve case — verify
+            # the comparison still hits regardless.
+            result = tools.log_time(
+                project="ADMIN", task="Recruiting", hours=1.0, notes="", date="2026-04-08"
+            )
+        assert "tool_notes" not in result
+    finally:
+        tools.configure()
