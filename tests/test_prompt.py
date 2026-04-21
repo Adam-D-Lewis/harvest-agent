@@ -1,4 +1,5 @@
 from datetime import date
+from pathlib import Path
 
 from harvest_agent.config import Config
 from harvest_agent.project_index import ProjectInfo
@@ -168,9 +169,6 @@ def test_prompt_omits_projects_section_when_index_not_passed():
     cfg = Config.model_validate(_config_dict())
     prompt = build_system_prompt(cfg, today=date(2026, 4, 7))
     assert "## Projects and tasks" not in prompt
-
-
-from pathlib import Path
 
 
 def test_prompt_includes_config_path_when_given():
