@@ -140,10 +140,12 @@ def _sample_index():
         "web redesign": ProjectInfo(
             canonical_name="Web Redesign",
             tasks={"programming": "Programming", "meetings / standups": "Meetings / Standups"},
+            client="Acme Corp",
         ),
         "admin": ProjectInfo(
             canonical_name="Admin",
             tasks={"misc": "Misc"},
+            client="OpenTeams, Inc.",
         ),
     }
 
@@ -157,6 +159,28 @@ def test_prompt_includes_projects_and_tasks_section_when_index_provided():
     assert "Meetings / Standups" in prompt
     assert "Admin" in prompt
     assert "Misc" in prompt
+    # Clients must be surfaced so the model can resolve work named by client.
+    assert "Acme Corp" in prompt
+    assert "OpenTeams, Inc." in prompt
+
+
+def test_prompt_projects_section_shows_client_on_same_line_as_project():
+    """Each project line must name its client, so the model can map a request
+    phrased by client name (e.g. "log under Acme Corp") to the right project."""
+    cfg = Config.model_validate(_config_dict())
+    prompt = build_system_prompt(cfg, today=date(2026, 4, 7), project_index=_sample_index())
+    project_lines = [ln for ln in prompt.splitlines() if ln.startswith("- **Web Redesign**")]
+    assert len(project_lines) == 1
+    assert "Acme Corp" in project_lines[0]
+
+
+def test_prompt_projects_section_omits_client_annotation_when_blank():
+    """A project with no client (e.g. fetch lacked the field) renders without
+    a dangling '(client: )' marker."""
+    cfg = Config.model_validate(_config_dict())
+    index = {"web redesign": ProjectInfo(canonical_name="Web Redesign", tasks={"programming": "Programming"})}
+    prompt = build_system_prompt(cfg, today=date(2026, 4, 7), project_index=index)
+    assert "client:" not in prompt
 
 
 def test_prompt_omits_projects_section_when_index_empty():

@@ -19,6 +19,7 @@ from harvest_agent import harvest_cli
 class ProjectInfo:
     canonical_name: str           # exact spelling from harvest
     tasks: dict[str, str]         # lowercased task name -> canonical task name
+    client: str = ""              # client name from harvest ("" if absent)
 
 
 # A lowercased project name -> ProjectInfo. Empty dict means "validation
@@ -32,9 +33,12 @@ def build_project_index() -> ProjectIndex:
 
     Calls `harvest list projects --json` exactly once. The harvest CLI returns
     a top-level JSON array of ProjectAssignment objects, each with a nested
-    `project` and an array of `task_assignments` whose own `task` carries the
-    name we want. We include both active and inactive task assignments — the
-    tool's only job is to reject truly nonexistent names.
+    `project`, a nested `client`, and an array of `task_assignments` whose own
+    `task` carries the name we want. We capture the client name too so the
+    prompt can show which client each project belongs to — the model needs it
+    to resolve requests phrased by client name (e.g. "log under Concepts NREC"
+    when the project is "AI Platform"). We include both active and inactive task
+    assignments — the tool's only job is to reject truly nonexistent names.
 
     On any failure (CLI error, malformed JSON, missing fields), returns an
     empty dict and prints a one-line warning. Callers MUST treat an empty
@@ -84,6 +88,15 @@ def build_project_index() -> ProjectIndex:
             if isinstance(task_name, str) and task_name:
                 tasks[task_name.lower()] = task_name
 
-        index[name.lower()] = ProjectInfo(canonical_name=name, tasks=tasks)
+        client_obj = assignment.get("client")
+        client_name = ""
+        if isinstance(client_obj, dict):
+            name_val = client_obj.get("name")
+            if isinstance(name_val, str):
+                client_name = name_val
+
+        index[name.lower()] = ProjectInfo(
+            canonical_name=name, tasks=tasks, client=client_name
+        )
 
     return index

@@ -76,12 +76,17 @@ def _format_projects_and_tasks(project_index: ProjectIndex) -> str:
     lines = [
         "## Projects and tasks\n",
         "Only these projects and tasks exist. Use the exact spelling shown — "
-        "the tools are case-insensitive but won't accept invented names.\n",
+        "the tools are case-insensitive but won't accept invented names. Each "
+        "project belongs to a client (shown in parentheses). If the user refers "
+        "to work by its client name, map it to the project(s) under that client; "
+        "if a client owns more than one project, ask which they mean rather than "
+        "guessing.\n",
     ]
     # Sort by canonical name for stable output
     for info in sorted(project_index.values(), key=lambda i: i.canonical_name):
         task_list = ", ".join(sorted(info.tasks.values())) if info.tasks else "(no tasks)"
-        lines.append(f"- **{info.canonical_name}**: {task_list}")
+        client_suffix = f" (client: {info.client})" if info.client else ""
+        lines.append(f"- **{info.canonical_name}**{client_suffix}: {task_list}")
     return "\n".join(lines)
 
 

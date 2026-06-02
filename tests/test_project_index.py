@@ -5,9 +5,20 @@ from harvest_agent.project_index import ProjectInfo, ProjectIndex, build_project
 
 
 def test_project_info_holds_canonical_name_and_tasks():
-    info = ProjectInfo(canonical_name="Web Redesign", tasks={"programming": "Programming"})
+    info = ProjectInfo(
+        canonical_name="Web Redesign",
+        tasks={"programming": "Programming"},
+        client="Acme Corp",
+    )
     assert info.canonical_name == "Web Redesign"
     assert info.tasks["programming"] == "Programming"
+    assert info.client == "Acme Corp"
+
+
+def test_project_info_client_defaults_to_empty():
+    # client is optional so validation-only call sites can omit it.
+    info = ProjectInfo(canonical_name="Web Redesign", tasks={})
+    assert info.client == ""
 
 
 def test_project_index_is_a_dict_alias():
@@ -20,13 +31,13 @@ def _ok(stdout: str) -> dict:
     return {"ok": True, "returncode": 0, "stdout": stdout, "stderr": ""}
 
 
-def _project_assignment(project_id, project_name, tasks):
+def _project_assignment(project_id, project_name, tasks, client_name="C"):
     """Build a fake harvest ProjectAssignment with nested task_assignments."""
     return {
         "id": project_id * 10,  # assignment id, distinct from project id
         "is_active": True,
         "project": {"id": project_id, "name": project_name, "code": ""},
-        "client": {"id": 1, "name": "C"},
+        "client": {"id": 1, "name": client_name},
         "task_assignments": [
             {
                 "id": 9000 + t_id,
@@ -40,8 +51,9 @@ def _project_assignment(project_id, project_name, tasks):
 
 def test_build_project_index_happy_path():
     payload = json.dumps([
-        _project_assignment(1, "Web Redesign", [(10, "Programming"), (11, "Meetings / Standups")]),
-        _project_assignment(2, "Mobile App v2", [(20, "Backend API")]),
+        _project_assignment(1, "Web Redesign", [(10, "Programming"), (11, "Meetings / Standups")],
+                            client_name="Acme Corp"),
+        _project_assignment(2, "Mobile App v2", [(20, "Backend API")], client_name="Globex Inc"),
     ])
     with patch("harvest_agent.project_index.harvest_cli.run", return_value=_ok(payload)) as m:
         idx = build_project_index()
@@ -51,6 +63,7 @@ def test_build_project_index_happy_path():
 
     dl = idx["web redesign"]
     assert dl.canonical_name == "Web Redesign"
+    assert dl.client == "Acme Corp"
     assert dl.tasks == {
         "programming": "Programming",
         "meetings / standups": "Meetings / Standups",
@@ -58,6 +71,7 @@ def test_build_project_index_happy_path():
 
     mobile = idx["mobile app v2"]
     assert mobile.canonical_name == "Mobile App v2"
+    assert mobile.client == "Globex Inc"
     assert mobile.tasks == {"backend api": "Backend API"}
 
 
@@ -106,3 +120,6 @@ def test_build_project_index_skips_assignments_with_missing_fields():
     assert set(idx.keys()) == {"good", "also good"}
     assert idx["good"].tasks == {}
     assert idx["also good"].tasks == {"real task": "Real Task"}
+    # These assignments carry no `client` key — it must default to "".
+    assert idx["good"].client == ""
+    assert idx["also good"].client == ""
