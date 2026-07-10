@@ -179,6 +179,15 @@ RELATIVE_DATE_CASES = [
         "2026-03-31",
         "regression: model must read last-week dates off the 3-week table",
     ),
+    _date_case(
+        "date_bare_weekday_defaults_to_past",
+        "Monday",
+        TODAY,
+        "2026-04-06",
+        "regression: a bare weekday defaults to the most recent PAST "
+        "occurrence (this Mon 2026-04-06), since hours are logged after the "
+        "fact — not next week's Monday",
+    ),
 ]
 
 

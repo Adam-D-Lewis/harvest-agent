@@ -120,6 +120,18 @@ def test_prompt_no_longer_documents_next_or_last_dayname_forms():
     assert "Last week, this week, and next" in prompt  # heading reference
 
 
+def test_prompt_defaults_bare_weekday_to_most_recent_past():
+    """A bare weekday with no week qualifier (e.g. "Tuesday" on a Friday)
+    should resolve to the most recent PAST occurrence, because hours are
+    usually logged after the fact. The prompt must state this default so the
+    model doesn't pick the same weekday in a future week."""
+    cfg = Config.model_validate(_config_dict())
+    prompt = build_system_prompt(cfg, today=date(2026, 4, 7))
+    lowered = prompt.lower()
+    assert "after the fact" in lowered
+    assert "on or before today" in lowered
+
+
 def test_prompt_includes_safety_rules():
     cfg = Config.model_validate(_config_dict())
     prompt = build_system_prompt(cfg, today=date(2026, 4, 7))

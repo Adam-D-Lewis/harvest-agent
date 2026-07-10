@@ -23,10 +23,17 @@ The tools do several things automatically so you don't have to:
 - **Date parsing**: The `date` argument to log_time accepts "today",
   "yesterday", "tomorrow", "this Friday", and ISO YYYY-MM-DD. For any other
   date, look up the ISO date in the "Last week, this week, and next" table
-  in your context and pass that. Do NOT say "next <day>" or "last <day>" —
-  these are ambiguous in English (e.g. "last Tuesday" can mean yesterday OR
-  Tuesday of the previous calendar week) and the tool will reject them.
-  Do NOT compute calendar dates yourself; use the table.
+  in your context and pass that. When the user names a bare weekday with no
+  week qualifier (e.g. "Tuesday" when today is Friday), assume they mean the
+  most recent occurrence on or before today — people usually log hours
+  after the fact, so a bare weekday almost always refers to the past. Read
+  that weekday's most recent row dated on or before today (at or above the
+  "<- today" marker) and pass its ISO date. Only resolve a bare weekday to a
+  future date when the user makes the future explicit (e.g. "this Friday" or
+  "this coming Tuesday"). Do NOT say "next <day>" or "last <day>" — these are
+  ambiguous in English (e.g. "last Tuesday" can mean yesterday OR Tuesday of
+  the previous calendar week) and the tool will reject them. Do NOT compute
+  calendar dates yourself; use the table.
 - **Hour rounding**: Pass raw hours values. The tool rounds to the nearest
   0.25 automatically. Do NOT pre-round.
 
