@@ -26,7 +26,7 @@ env = { HARVEST_AGENT_BASE_URL = "http://localhost:8080/v1", HARVEST_AGENT_MODEL
 # exporting different values in your shell before running pixi.
 [tasks.agent]
 cmd = "python -m harvest_agent"
-env = { HARVEST_AGENT_BASE_URL = "http://localhost:8080/v1", HARVEST_AGENT_MODEL = "Qwen3.6-35B-A3B", HARVEST_AGENT_DEBUG = "true" }
+env = { HARVEST_AGENT_BASE_URL = "http://localhost:8080/v1", HARVEST_AGENT_MODEL = "Ternary-Bonsai-2-27B", HARVEST_AGENT_DEBUG = "true" }
 
 [tasks.show-config]
 cmd = "python -m harvest_agent.show_config"
